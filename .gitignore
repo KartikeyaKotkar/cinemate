@@ -1,1 +1,22 @@
 cinemate_roadmap.md
+.venv
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Data & DB
+backend/data/chroma_db/
+backend/data/movies_enriched.py   # if this is generated/enriched output, not source
+
+# Scripts venv (if you ever init one there)
+scripts/.venv/
+
+# Misc
+.DS_Store
+*.log
