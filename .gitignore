@@ -5,18 +5,19 @@ cinemate_roadmap.md
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
 *.egg-info/
 dist/
 build/
 
-# Data & DB
+# Data (generated)
 backend/data/chroma_db/
-backend/data/movies_enriched.py   # if this is generated/enriched output, not source
+backend/data/movies_enriched.json
+backend/data/movies_enriched.csv
+backend/data/*.json
+backend/data/*.csv
 
-# Scripts venv (if you ever init one there)
-scripts/.venv/
+# Logs
+*.log
 
 # Misc
 .DS_Store
-*.log
