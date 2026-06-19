@@ -8,15 +8,21 @@ Classifies queries into three categories:
   - "ambiguous" → both, deduplicated, title matches first
 
 Re-ranking formula (applied to semantic results):
-  final_score = (cosine_similarity * 0.7)
-              + (normalized_rating  * 0.2)
-              + (normalized_popularity * 0.1)
+  final_score = (cosine_similarity * w_sim)
+              + (normalized_rating  * w_rat)
+              + (normalized_popularity * w_pop)
+
+Where:
+  - normalized_rating is Bayesian average rating divided by 10.
+  - normalized_popularity is log-scaled popularity computed across candidate batch.
+  - Weights default to 0.7, 0.2, 0.1 but vary by profile.
 """
 
 import os
 from pathlib import Path
 
 import chromadb
+import numpy as np
 import requests
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
@@ -36,23 +42,76 @@ MODEL_NAME = "BAAI/bge-large-en-v1.5"
 TOP_K = 5
 
 # Words that signal a mood/vibe query rather than a title lookup
-MOOD_WORDS = frozenset({
-    # adjectives / emotional descriptors
-    "lonely", "dark", "sad", "happy", "funny", "scary", "intense", "slow",
-    "fast", "beautiful", "quiet", "loud", "romantic", "melancholy", "hopeful",
-    "bleak", "uplifting", "disturbing", "nostalgic", "dreamy", "gritty",
-    "atmospheric", "tense", "relaxing", "emotional", "heartbreaking",
-    "thrilling", "suspenseful", "whimsical", "absurd", "surreal", "eerie",
-    "cozy", "warm", "cold", "brutal", "gentle", "epic", "intimate",
-    "cerebral", "visceral", "psychedelic", "haunting", "bittersweet",
-    "redemptive", "existential", "philosophical", "poetic", "raw",
-    # intent words
-    "feel", "feels", "feeling", "vibe", "mood", "like", "similar",
-    "something", "anything", "recommend", "suggest",
-})
+MOOD_WORDS = frozenset(
+    {
+        # adjectives / emotional descriptors
+        "lonely",
+        "dark",
+        "sad",
+        "happy",
+        "funny",
+        "scary",
+        "intense",
+        "slow",
+        "fast",
+        "beautiful",
+        "quiet",
+        "loud",
+        "romantic",
+        "melancholy",
+        "hopeful",
+        "bleak",
+        "uplifting",
+        "disturbing",
+        "nostalgic",
+        "dreamy",
+        "gritty",
+        "atmospheric",
+        "tense",
+        "relaxing",
+        "emotional",
+        "heartbreaking",
+        "thrilling",
+        "suspenseful",
+        "whimsical",
+        "absurd",
+        "surreal",
+        "eerie",
+        "cozy",
+        "warm",
+        "cold",
+        "brutal",
+        "gentle",
+        "epic",
+        "intimate",
+        "cerebral",
+        "visceral",
+        "psychedelic",
+        "haunting",
+        "bittersweet",
+        "redemptive",
+        "existential",
+        "philosophical",
+        "poetic",
+        "raw",
+        # intent words
+        "feel",
+        "feels",
+        "feeling",
+        "vibe",
+        "mood",
+        "like",
+        "similar",
+        "something",
+        "anything",
+        "recommend",
+        "suggest",
+    }
+)
 
 
 # ── Query classification ──────────────────────────────────────────────────────
+
 
 def classify_query(query: str) -> str:
     """
@@ -75,6 +134,7 @@ def classify_query(query: str) -> str:
 
 # ── TMDB title search ────────────────────────────────────────────────────────
 
+
 def tmdb_title_search(query: str, limit: int = TOP_K) -> list[dict]:
     """
     Search TMDB by title. Returns results in the same dict shape as
@@ -95,25 +155,27 @@ def tmdb_title_search(query: str, limit: int = TOP_K) -> list[dict]:
         overview = movie.get("overview", "").strip()
         if not overview:
             continue
-        results.append({
-            "title": movie.get("title", ""),
-            "overview": overview,
-            "genres": "",               # /search/movie only returns genre_ids
-            "keywords": "",
-            "release_year": movie.get("release_date", "")[:4],
-            "rating": float(movie.get("vote_average", 0)),
-            "vote_count": int(movie.get("vote_count", 0)),
-            "popularity": float(movie.get("popularity", 0)),
-            "poster_path": movie.get("poster_path") or "",
-            "tagline": "",
-            "runtime": 0,
-            "spoken_languages": "",
-            "production_companies": "",
-            "belongs_to_collection": "",
-            "_movie_id": str(movie["id"]),
-            "_source": "tmdb",
-            "_similarity": None,        # no cosine score for title matches
-        })
+        results.append(
+            {
+                "title": movie.get("title", ""),
+                "overview": overview,
+                "genres": "",  # /search/movie only returns genre_ids
+                "keywords": "",
+                "release_year": movie.get("release_date", "")[:4],
+                "rating": float(movie.get("vote_average", 0)),
+                "vote_count": int(movie.get("vote_count", 0)),
+                "popularity": float(movie.get("popularity", 0)),
+                "poster_path": movie.get("poster_path") or "",
+                "tagline": "",
+                "runtime": 0,
+                "spoken_languages": "",
+                "production_companies": "",
+                "belongs_to_collection": "",
+                "_movie_id": str(movie["id"]),
+                "_source": "tmdb",
+                "_similarity": None,  # no cosine score for title matches
+            }
+        )
 
     return results
 
@@ -125,46 +187,95 @@ def tmdb_title_search(query: str, limit: int = TOP_K) -> list[dict]:
 # We over-fetch from ChromaDB (RERANK_FACTOR × top_k), score every candidate
 # with the weighted formula, sort, and trim to top_k.
 
-RERANK_FACTOR = 3  # fetch 3× as many candidates for re-ranking headroom
+RERANK_FACTOR = 10  # fetch 3× as many candidates for re-ranking headroom
+MIN_VOTES = 50
 
-# Weights — tweak after testing; must sum to 1.0
-W_SIMILARITY  = 0.7
-W_RATING      = 0.2
-W_POPULARITY  = 0.1
+# WEIGHT_PROFILES: default balances all; popular boosts crowd-pleasers; obscure drops popularity; acclaimed highlights high-rated films.
+WEIGHT_PROFILES = {
+    "default": {"similarity": 0.7, "rating": 0.2, "popularity": 0.1},
+    "popular": {"similarity": 0.6, "rating": 0.1, "popularity": 0.3},
+    "obscure": {"similarity": 0.8, "rating": 0.2, "popularity": 0.0},
+    "acclaimed": {"similarity": 0.5, "rating": 0.4, "popularity": 0.1},
+}
 
 
-def _rerank(results: list[dict], top_k: int) -> list[dict]:
+def calculate_movie_score(
+    result: dict,
+    max_popularity: float,
+    global_mean_rating: float,
+    weights: dict,
+) -> dict:
+    """
+    Calculate scoring components for a single movie candidate.
+    """
+    w_similarity = weights.get("similarity", 0.7)
+    w_rating = weights.get("rating", 0.2)
+    w_popularity = weights.get("popularity", 0.1)
+
+    sim = result.get("_similarity") or 0.0
+    rating = float(result.get("rating", 0))
+    votes = max(0.0, float(result.get("vote_count", 0)))
+    raw_pop = float(result.get("popularity", 0))
+
+    # Bayesian average rating normalization
+    bayesian_avg = (votes * rating + MIN_VOTES * global_mean_rating) / (
+        votes + MIN_VOTES
+    )
+    norm_rating = bayesian_avg / 10.0
+
+    # Log-scaled popularity normalization
+    denom = np.log1p(max_popularity)
+    norm_pop = np.log1p(raw_pop) / denom if denom > 0 else 0.0
+
+    sim_contrib = sim * w_similarity
+    rating_contrib = norm_rating * w_rating
+    pop_contrib = norm_pop * w_popularity
+
+    final_score = round(sim_contrib + rating_contrib + pop_contrib, 4)
+
+    return {
+        "final_score": final_score,
+        "similarity_score": sim,
+        "rating_contribution": rating_contrib,
+        "popularity_contribution": pop_contrib,
+    }
+
+
+def _rerank(
+    results: list[dict],
+    top_k: int,
+    collection: chromadb.Collection | None = None,
+    profile: str = "default",
+    debug: bool = False,
+) -> list[dict]:
     """
     Apply weighted re-ranking and return the best *top_k* results.
-
-    Formula per result:
-      final_score = (cosine_similarity * 0.7)
-                  + (rating / 10       * 0.2)
-                  + (norm_popularity    * 0.1)
-
-    normalized_popularity is min-max scaled across the candidate set.
     """
     if not results:
         return results
 
-    # ── Gather raw popularity values for min-max scaling ──────────────────
-    popularities = [float(r.get("popularity", 0)) for r in results]
-    pop_min = min(popularities)
-    pop_max = max(popularities)
-    pop_range = pop_max - pop_min if pop_max != pop_min else 1.0  # avoid /0
+    if collection is None:
+        collection = get_collection()
+    C = _get_global_mean_rating(collection)
+
+    # Look up weights profile, fall back to "default" if profile not found or malformed
+    weights = WEIGHT_PROFILES.get(profile)
+    if (
+        not isinstance(weights, dict)
+        or not all(k in weights for k in ("similarity", "rating", "popularity"))
+        or abs(sum(weights.values()) - 1.0) > 1e-5
+    ):
+        weights = WEIGHT_PROFILES["default"]
+
+    # Get max popularity across the candidate batch
+    max_popularity = max((float(r.get("popularity", 0)) for r in results), default=0.0)
 
     # ── Score each candidate ─────────────────────────────────────────────
-    for r, raw_pop in zip(results, popularities):
-        sim = r.get("_similarity") or 0.0
-        norm_rating = float(r.get("rating", 0)) / 10.0
-        norm_pop = (raw_pop - pop_min) / pop_range
-
-        r["_final_score"] = round(
-            (sim * W_SIMILARITY)
-            + (norm_rating * W_RATING)
-            + (norm_pop * W_POPULARITY),
-            4,
-        )
+    for r in results:
+        scores = calculate_movie_score(r, max_popularity, C, weights)
+        r["_final_score"] = scores["final_score"]
+        if debug:
+            r["_score_breakdown"] = scores
 
     # ── Sort by final score descending, then trim ────────────────────────
     results.sort(key=lambda r: r["_final_score"], reverse=True)
@@ -173,11 +284,14 @@ def _rerank(results: list[dict], top_k: int) -> list[dict]:
 
 # ── Semantic (vector) search ─────────────────────────────────────────────────
 
+
 def semantic_search(
     query: str,
     top_k: int = TOP_K,
     model: SentenceTransformer | None = None,
     collection: chromadb.Collection | None = None,
+    profile: str = "default",
+    debug: bool = False,
 ) -> list[dict]:
     """
     Vector search via ChromaDB with weighted re-ranking.
@@ -193,7 +307,9 @@ def semantic_search(
         collection = client.get_collection(COLLECTION)
 
     fetch_k = top_k * RERANK_FACTOR
-    query_vector = model.encode([query]).tolist()
+
+    QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
+    query_vector = model.encode([QUERY_INSTRUCTION + query]).tolist()
 
     results = collection.query(
         query_embeddings=query_vector,
@@ -213,10 +329,11 @@ def semantic_search(
         entry["_similarity"] = round(1 - dist, 4)  # cosine distance → similarity
         enriched.append(entry)
 
-    return _rerank(enriched, top_k)
+    return _rerank(enriched, top_k, collection, profile=profile, debug=debug)
 
 
 # ── Hybrid search (the main entry point) ─────────────────────────────────────
+
 
 def _enrich_tmdb_from_chroma(
     tmdb_results: list[dict],
@@ -257,12 +374,15 @@ def _enrich_tmdb_from_chroma(
 
 _MODEL_CACHE = None
 _COLLECTION_CACHE = None
+_GLOBAL_MEAN_RATING_CACHE = None
+
 
 def get_model():
     global _MODEL_CACHE
     if _MODEL_CACHE is None:
         _MODEL_CACHE = SentenceTransformer(MODEL_NAME)
     return _MODEL_CACHE
+
 
 def get_collection():
     global _COLLECTION_CACHE
@@ -272,7 +392,28 @@ def get_collection():
     return _COLLECTION_CACHE
 
 
-def search(query: str, top_k: int = TOP_K) -> list[dict]:
+def _get_global_mean_rating(collection: chromadb.Collection) -> float:
+    global _GLOBAL_MEAN_RATING_CACHE
+    if _GLOBAL_MEAN_RATING_CACHE is None:
+        data = collection.get(include=["metadatas"])
+        ratings = [
+            float(meta.get("rating", 0.0))
+            for meta in data["metadatas"]
+            if meta is not None
+        ]
+        if ratings:
+            _GLOBAL_MEAN_RATING_CACHE = sum(ratings) / len(ratings)
+        else:
+            _GLOBAL_MEAN_RATING_CACHE = 0.0
+    return _GLOBAL_MEAN_RATING_CACHE
+
+
+def search(
+    query: str,
+    top_k: int = TOP_K,
+    profile: str = "default",
+    debug: bool = False,
+) -> list[dict]:
     """
     Hybrid search entry point.
 
@@ -292,15 +433,36 @@ def search(query: str, top_k: int = TOP_K) -> list[dict]:
         results = _enrich_tmdb_from_chroma(results, collection)
         # Fallback to semantic if TMDB returns nothing
         if not results:
-            results = semantic_search(query, top_k, model, collection)
+            results = semantic_search(
+                query,
+                top_k,
+                model=model,
+                collection=collection,
+                profile=profile,
+                debug=debug,
+            )
 
     elif query_type == "mood":
-        results = semantic_search(query, top_k, model, collection)
+        results = semantic_search(
+            query,
+            top_k,
+            model=model,
+            collection=collection,
+            profile=profile,
+            debug=debug,
+        )
 
     else:  # ambiguous — do both, deduplicate, title matches first
         title_results = tmdb_title_search(query, limit=top_k)
         title_results = _enrich_tmdb_from_chroma(title_results, collection)
-        sem_results = semantic_search(query, top_k, model, collection)
+        sem_results = semantic_search(
+            query,
+            top_k,
+            model=model,
+            collection=collection,
+            profile=profile,
+            debug=debug,
+        )
 
         seen_ids = set()
         results = []

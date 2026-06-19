@@ -157,22 +157,14 @@ def discover_and_enrich():
 
     genre_map = get_genres()
 
-    # 2. Define discovery strategies
     strategies = [
         # Strategy A: Popularity descending (covers mainstream cinema)
-        {"sort_by": "popularity.desc", "vote_count.gte": 50, "pages": 250},
+        {"sort_by": "popularity.desc", "vote_count.gte": 50, "with_original_language": "en", "pages": 450},
         # Strategy B: High rated (covers critically acclaimed / classics)
-        {"sort_by": "vote_average.desc", "vote_count.gte": 100, "pages": 150},
-        # Strategy C: Foreign language movies (ensures French, Japanese, Korean etc.)
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "fr", "pages": 30},
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "ja", "pages": 30},
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "ko", "pages": 30},
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "it", "pages": 20},
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "es", "pages": 20},
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "de", "pages": 20},
+        {"sort_by": "vote_average.desc", "vote_count.gte": 50, "with_original_language": "en", "pages": 250},
         # Strategy D: Specific genres
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_genres": 99, "pages": 35},  # Documentary
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_genres": 36, "pages": 35},  # History
+        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "en", "with_genres": 99, "pages": 50},  # Documentary
+        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "en", "with_genres": 36, "pages": 50},  # History
     ]
 
     target_count = 10500
@@ -211,7 +203,10 @@ def discover_and_enrich():
                 print(f"No results returned on page {page}. Strategy might be exhausted.")
                 break
 
-            new_in_page = 0
+            # Parallel enrichment of new movies in the page
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            movies_to_enrich = []
             for movie_data in results:
                 movie_id = movie_data["id"]
                 if movie_id in seen_ids:
@@ -221,10 +216,7 @@ def discover_and_enrich():
                 if not overview:
                     continue
 
-                # Quick check before expensive calls
                 genre_names = [genre_map.get(gid, "Unknown") for gid in movie_data.get("genre_ids", [])]
-
-                # Create draft movie object to check quality score
                 movie = {
                     "id": movie_id,
                     "title": movie_data.get("title", ""),
@@ -236,39 +228,43 @@ def discover_and_enrich():
                     "popularity": movie_data.get("popularity", 0),
                     "poster_path": movie_data.get("poster_path", ""),
                 }
+                movies_to_enrich.append(movie)
 
-                # Fetch extra details (enrichment)
+            def enrich_single_movie(m):
                 try:
-                    time.sleep(0.2)  # Respect rate limit
-                    keywords = get_keywords(movie_id)
-                    movie["keywords"] = keywords
-                    
-                    time.sleep(0.2)  # Respect rate limit
-                    details = get_movie_details(movie_id)
-                    movie.update(details)
+                    # Thread-safe query
+                    m["keywords"] = get_keywords(m["id"])
+                    details = get_movie_details(m["id"])
+                    m.update(details)
+                    return m
                 except Exception as e:
-                    print(f"  ⚠ Failed to enrich movie {movie_id} ({movie['title']}): {e}. Skipping.")
-                    continue
+                    print(f"  ⚠ Failed to enrich movie {m['id']} ({m['title']}): {e}")
+                    return None
 
-                # Quality gate: score must be at least 4
-                q_score = quality_score(movie)
-                if q_score < 4:
-                    # Skip low-quality entries to ensure high search relevance precision
-                    continue
+            new_in_page = 0
+            if movies_to_enrich:
+                # Use max 15 threads to stay well below TMDB 40 req/sec limit
+                with ThreadPoolExecutor(max_workers=15) as executor:
+                    futures = {executor.submit(enrich_single_movie, m): m for m in movies_to_enrich}
+                    for future in as_completed(futures):
+                        enriched_movie = future.result()
+                        if enriched_movie:
+                            # Quality gate: score must be at least 4
+                            if quality_score(enriched_movie) < 4:
+                                continue
+                            
+                            movies_dict[enriched_movie["id"]] = enriched_movie
+                            seen_ids.add(enriched_movie["id"])
+                            new_in_page += 1
+                            save_counter += 1
 
-                # Add to dataset
-                movies_dict[movie_id] = movie
-                seen_ids.add(movie_id)
-                new_in_page += 1
-                save_counter += 1
-
-                # Incremental save
-                if save_counter >= 50:
-                    save_progress(list(movies_dict.values()))
-                    save_counter = 0
+                            # Incremental save
+                            if save_counter >= 50:
+                                save_progress(list(movies_dict.values()))
+                                save_counter = 0
 
             print(f"Strategy {s_idx} Page {page}/{pages} | Added {new_in_page} new movies | Total unique: {len(movies_dict)}")
-            time.sleep(0.3)
+            time.sleep(0.1)
 
     # Final save
     save_progress(list(movies_dict.values()))

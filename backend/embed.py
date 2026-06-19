@@ -99,12 +99,20 @@ def load_movies(path: Path) -> list[dict]:
             seen_ids.add(m["id"])
             unique_movies.append(m)
 
-    # Filter out movies with no overview — useless for semantic search
-    valid = [m for m in unique_movies if m.get("overview", "").strip()]
+    def quality_score(movie) -> int:
+        score = 0
+        if len(movie.get("overview", "")) > 100: score += 3
+        if len(movie.get("keywords", [])) >= 5:  score += 2
+        if movie.get("tagline"):                 score += 1
+        if movie.get("vote_count", 0) >= 100:   score += 2
+        return score
+
+    # Filter out movies with no overview or low quality score
+    valid = [m for m in unique_movies if m.get("overview", "").strip() and quality_score(m) >= 4]
     
-    skipped_overview = len(unique_movies) - len(valid)
+    skipped = len(unique_movies) - len(valid)
     skipped_dups = len(movies) - len(unique_movies)
-    print(f"Loaded {len(valid)} unique movies (skipped {skipped_overview} without overview, {skipped_dups} duplicates)")
+    print(f"Loaded {len(valid)} unique movies (skipped {skipped} low-quality/no-overview, {skipped_dups} duplicates)")
     return valid
 
 
