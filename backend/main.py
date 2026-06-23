@@ -1,5 +1,7 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from search import search, get_collection, get_model
 from models import SearchResponse, MovieResult
 
@@ -23,6 +25,15 @@ async def lifespan(app: FastAPI):
     # Runs at shutdown (cleanup if needed)
 
 app = FastAPI(title="CineMate API", lifespan=lifespan)
+
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 def format_movie(r: dict) -> MovieResult:
     genres_str = r.get("genres", "")
