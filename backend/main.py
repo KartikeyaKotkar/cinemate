@@ -1,4 +1,6 @@
 import os
+import json
+import cache
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,9 +71,19 @@ def format_movie(r: dict) -> MovieResult:
 @app.get("/search", response_model=SearchResponse)
 def search_movies(q: str, limit: int = 10):
     """Semantic search with hybrid fallback."""
+    norm_q = q.lower().strip()
+    cache_key = f"search:{norm_q}:{limit}"
+    
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return json.loads(cached_data)
+
     raw_results = search(query=q, top_k=limit)
     formatted = [format_movie(r) for r in raw_results]
-    return SearchResponse(query=q, results=formatted, total=len(formatted))
+    response = SearchResponse(query=q, results=formatted, total=len(formatted))
+    
+    cache.set(cache_key, response.model_dump_json(), ttl=86400)
+    return response
 
 @app.get("/movie/{movie_id}", response_model=MovieResult)
 def get_movie(request: Request, movie_id: int):
