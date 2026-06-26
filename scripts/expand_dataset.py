@@ -159,15 +159,20 @@ def discover_and_enrich():
 
     strategies = [
         # Strategy A: Popularity descending (covers mainstream cinema)
-        {"sort_by": "popularity.desc", "vote_count.gte": 50, "with_original_language": "en", "pages": 450},
+        {"sort_by": "popularity.desc", "vote_count.gte": 50, "with_original_language": "en", "pages": 500},
         # Strategy B: High rated (covers critically acclaimed / classics)
-        {"sort_by": "vote_average.desc", "vote_count.gte": 50, "with_original_language": "en", "pages": 250},
-        # Strategy D: Specific genres
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "en", "with_genres": 99, "pages": 50},  # Documentary
-        {"sort_by": "popularity.desc", "vote_count.gte": 30, "with_original_language": "en", "with_genres": 36, "pages": 50},  # History
+        {"sort_by": "vote_average.desc", "vote_count.gte": 50, "with_original_language": "en", "pages": 500},
+        # Strategy C: Vote count descending
+        {"sort_by": "vote_count.desc", "vote_count.gte": 30, "with_original_language": "en", "pages": 500},
+        # Strategy D: Release date descending
+        {"sort_by": "primary_release_date.desc", "vote_count.gte": 30, "with_original_language": "en", "pages": 500},
+        # Strategy E: Popularity descending with lower vote count threshold to cross 20k
+        {"sort_by": "popularity.desc", "vote_count.gte": 15, "with_original_language": "en", "pages": 200},
+        # Strategy F: Release date descending with lower vote count threshold to capture niche recent films
+        {"sort_by": "primary_release_date.desc", "vote_count.gte": 10, "with_original_language": "en", "pages": 400},
     ]
 
-    target_count = 10500
+    target_count = 21500
     save_counter = 0
 
     print(f"Target: Reach {target_count} high-quality movies. Currently have {len(seen_ids)} unique IDs.")
