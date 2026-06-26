@@ -146,20 +146,20 @@ def embed_and_store(movies: list[dict]):
         # Metadata stored alongside vectors (for display later)
         metadatas = [
             {
-                "title": m.get("title", ""),
-                "overview": m.get("overview", ""),
-                "genres": ", ".join(m.get("genres", [])),
-                "keywords": ", ".join(m.get("keywords", [])),
-                "release_year": str(m.get("release_year", "")),
-                "rating": float(m.get("rating", 0)),
-                "vote_count": int(m.get("vote_count", 0)),
-                "popularity": float(m.get("popularity", 0)),
-                "poster_path": m.get("poster_path", ""),
-                "tagline": m.get("tagline", ""),
+                "title": str(m.get("title") or ""),
+                "overview": str(m.get("overview") or ""),
+                "genres": ", ".join(m.get("genres") or []),
+                "keywords": ", ".join(m.get("keywords") or []),
+                "release_year": str(m.get("release_year") or ""),
+                "rating": float(m.get("rating") or 0.0),
+                "vote_count": int(m.get("vote_count") or 0),
+                "popularity": float(m.get("popularity") or 0.0),
+                "poster_path": str(m.get("poster_path") or ""),
+                "tagline": str(m.get("tagline") or ""),
                 "runtime": int(m.get("runtime") or 0),
-                "spoken_languages": ", ".join(m.get("spoken_languages", [])),
-                "production_companies": ", ".join(m.get("production_companies", [])),
-                "belongs_to_collection": m.get("belongs_to_collection") or "",
+                "spoken_languages": ", ".join(m.get("spoken_languages") or []),
+                "production_companies": ", ".join(m.get("production_companies") or []),
+                "belongs_to_collection": str(m.get("belongs_to_collection") or ""),
             }
             for m in batch
         ]
