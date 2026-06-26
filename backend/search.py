@@ -27,6 +27,8 @@ import requests
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 
+from quality import quality_score, LOW_QUALITY_THRESHOLD
+
 # ── Environment ───────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
@@ -231,13 +233,22 @@ def calculate_movie_score(
     rating_contrib = norm_rating * w_rating
     pop_contrib = norm_pop * w_popularity
 
-    final_score = round(sim_contrib + rating_contrib + pop_contrib, 4)
+    final_score = sim_contrib + rating_contrib + pop_contrib
+    
+    q_score = quality_score(result)
+    penalty_applied = q_score < LOW_QUALITY_THRESHOLD
+    if penalty_applied:
+        final_score *= 0.9
+        
+    final_score = round(final_score, 4)
 
     return {
         "final_score": final_score,
         "similarity_score": sim,
         "rating_contribution": rating_contrib,
         "popularity_contribution": pop_contrib,
+        "quality_score": q_score,
+        "quality_penalty_applied": penalty_applied,
     }
 
 
