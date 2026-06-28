@@ -57,9 +57,12 @@ export default function App() {
     recentSearches: [],
     watchlist: [],
     featuredFilm: FEATURED_FALLBACK,
+    spotifyUrl: "",
+    spotifyLoading: false,
     ui: {
       heroCollapsed: false,
-      detailOpen: false
+      detailOpen: false,
+      spotifyOpen: false
     }
   });
 
@@ -160,6 +163,43 @@ export default function App() {
         error: err.message || "An unexpected error occurred.",
         results: [],
         loading: false
+      });
+    }
+  };
+
+  const handleSpotifySync = async () => {
+    const url = state.spotifyUrl;
+    if (!url || url.trim().length === 0) return;
+    
+    updateState({ 
+      spotifyLoading: true, 
+      error: null 
+    });
+
+    try {
+      const response = await fetch(`http://localhost:8000/search/spotify?url=${encodeURIComponent(url)}&limit=8`);
+      if (!response.ok) {
+        throw new Error("Failed to process Spotify playlist.");
+      }
+      const data = await response.json();
+      
+      setState(prev => {
+        return {
+          ...prev,
+          query: data.query, // Set the mapped mood as the search query
+          results: data.results || [],
+          loading: false,
+          spotifyLoading: false,
+          ui: { ...prev.ui, heroCollapsed: true, spotifyOpen: false }
+        };
+      });
+    } catch (err) {
+      updateState({
+        error: err.message || "An unexpected error occurred.",
+        results: [],
+        loading: false,
+        spotifyLoading: false,
+        ui: { ...state.ui, spotifyOpen: false }
       });
     }
   };
@@ -284,6 +324,13 @@ export default function App() {
                 {link}
               </button>
             ))}
+            <button
+              className="text-base uppercase tracking-[0.12em] font-sans text-[#1DB954] hover:text-[#1ed760] transition-colors duration-250 focus:outline-none flex items-center gap-2"
+              onClick={() => updateState({ ui: { spotifyOpen: true } })}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.54.659.301 1.02zm1.44-3.3c-.301.42-.84.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.239.54-.959.72-1.56.3z"/></svg>
+              Sync
+            </button>
           </div>
 
           {/* Right: Search icon + Profile */}
@@ -887,6 +934,60 @@ export default function App() {
                 className={`w-full md:w-fit py-3.5 px-10 bg-brand-surface/50 border border-brand-divider hover:border-brand-highlight/50 text-brand-text-secondary hover:text-brand-text-primary font-sans text-xs tracking-[0.18em] uppercase rounded-xl mt-auto focus:outline-none ${HOVER_TRANSITION}`}
               >
                 Explore Similar Feelings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── SPOTIFY SYNC OVERLAY ─────────────────────────── */}
+      {state.ui.spotifyOpen && (
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-brand-bg/95 backdrop-blur-xl flex items-center justify-center py-14 px-6"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-2xl bg-brand-surface/40 border border-brand-divider p-10 md:p-14 rounded-3xl text-center shadow-2xl" style={{ animation: 'fade-in-up 0.4s ease-out both' }}>
+            <button
+              onClick={() => updateState({ ui: { spotifyOpen: false } })}
+              className="absolute top-6 right-6 text-brand-text-secondary hover:text-brand-text-primary transition-colors duration-250 focus:outline-none rounded-xl p-2 hover:bg-brand-surface/50"
+              aria-label="Close Spotify sync view"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <svg className="w-16 h-16 mx-auto text-[#1DB954] mb-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.54.659.301 1.02zm1.44-3.3c-.301.42-.84.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.239.54-.959.72-1.56.3z"/></svg>
+
+            <h2 className="font-serif text-3xl md:text-4xl text-brand-text-primary mb-4 leading-tight">
+              Synesthetic Discovery
+            </h2>
+            <p className="text-brand-text-secondary text-base leading-relaxed mb-10 max-w-lg mx-auto">
+              Paste a Spotify playlist link. We'll analyze its audio features (valence, energy, acousticness) and map it to a cinematic mood query to find movies that feel like your music.
+            </p>
+
+            <div className="flex flex-col gap-4 max-w-md mx-auto">
+              <input
+                type="text"
+                placeholder="https://open.spotify.com/playlist/..."
+                value={state.spotifyUrl}
+                onChange={(e) => updateState({ spotifyUrl: e.target.value })}
+                className="w-full bg-brand-surface/80 border border-brand-divider rounded-xl px-5 py-4 text-brand-text-primary placeholder-brand-text-secondary/40 outline-none focus:border-[#1DB954]/50 transition-colors duration-250 text-center"
+              />
+              <button
+                onClick={handleSpotifySync}
+                disabled={state.spotifyLoading || !state.spotifyUrl.includes('spotify.com/playlist')}
+                className="w-full py-4 bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-brand-surface disabled:text-brand-text-secondary disabled:cursor-not-allowed text-brand-bg font-sans font-medium tracking-[0.15em] uppercase rounded-xl transition-colors duration-250 flex items-center justify-center gap-2"
+              >
+                {state.spotifyLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-brand-bg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Analyzing...
+                  </>
+                ) : (
+                  "Find Matches"
+                )}
               </button>
             </div>
           </div>
