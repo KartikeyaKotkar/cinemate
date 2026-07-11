@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Moon, CloudRain, Aperture, BrainCircuit, Heart, Sunrise, Flame, Sparkles, Mountain, Smile } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -16,16 +17,16 @@ const CINEMATIC_QUOTES = [
 ];
 
 const MOOD_PILLS = [
-  { emoji: "🌙", label: "Quiet loneliness", query: "A quiet, melancholic movie about loneliness and solitude." },
-  { emoji: "☁️", label: "Rainy night", query: "A moody, atmospheric movie perfect for a rainy night." },
-  { emoji: "🎞️", label: "Beautiful cinematography", query: "A visually stunning movie with gorgeous cinematography and direction." },
-  { emoji: "🧩", label: "Mind-bending", query: "Existential and mind-bending sci-fi about time travel or space." },
-  { emoji: "❤️", label: "Found family", query: "A heartwarming story about unexpected friendships and found family." },
-  { emoji: "🌅", label: "Gentle optimism", query: "A feel-good, uplifting movie with gentle optimism." },
-  { emoji: "🔥", label: "Slow burn mystery", query: "A slow-burn atmospheric mystery with an unsettling vibe." },
-  { emoji: "💫", label: "Dreamlike romance", query: "A surreal, dreamy romance movie that feels like a fantasy." },
-  { emoji: "🏔️", label: "Big adventure", query: "An epic adventure film with breathtaking landscapes." },
-  { emoji: "😌", label: "Feel-good, not cheesy", query: "An intelligent, heartwarming comedy-drama that isn't cheesy." },
+  { icon: Moon, label: "Quiet loneliness", query: "A quiet, melancholic movie about loneliness and solitude." },
+  { icon: CloudRain, label: "Rainy night", query: "A moody, atmospheric movie perfect for a rainy night." },
+  { icon: Aperture, label: "Beautiful cinematography", query: "A visually stunning movie with gorgeous cinematography and direction." },
+  { icon: BrainCircuit, label: "Mind-bending", query: "Existential and mind-bending sci-fi about time travel or space." },
+  { icon: Heart, label: "Found family", query: "A heartwarming story about unexpected friendships and found family." },
+  { icon: Sunrise, label: "Gentle optimism", query: "A feel-good, uplifting movie with gentle optimism." },
+  { icon: Flame, label: "Slow burn mystery", query: "A slow-burn atmospheric mystery with an unsettling vibe." },
+  { icon: Sparkles, label: "Dreamlike romance", query: "A surreal, dreamy romance movie that feels like a fantasy." },
+  { icon: Mountain, label: "Big adventure", query: "An epic adventure film with breathtaking landscapes." },
+  { icon: Smile, label: "Feel-good, not cheesy", query: "An intelligent, heartwarming comedy-drama that isn't cheesy." },
 ];
 
 const HOVER_TRANSITION = "transition-all duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)]";
@@ -276,7 +277,7 @@ export default function App() {
       )}
 
       {/* ─── FLOATING HEADER ──────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 z-40 flex justify-center px-6 pt-4">
+      <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-6 pt-4">
         <nav className={`w-full max-w-6xl flex items-center justify-between px-8 py-3.5 rounded-2xl border ${HOVER_TRANSITION} ${
           headerScrolled 
             ? 'bg-brand-bg/80 backdrop-blur-xl border-brand-divider shadow-[0_8px_32px_rgba(0,0,0,0.4)]' 
@@ -311,10 +312,10 @@ export default function App() {
               </button>
             ))}
             <button
-              className="text-base uppercase tracking-[0.12em] font-sans text-[#1DB954] hover:text-[#1ed760] transition-colors duration-250 focus:outline-none flex items-center gap-2"
+              className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-brand-divider/40 bg-brand-surface/30 text-xs uppercase tracking-[0.12em] font-sans text-brand-text-secondary/60 hover:text-[#1DB954] hover:border-[#1DB954]/30 hover:bg-[#1DB954]/5 ${HOVER_TRANSITION} focus:outline-none`}
               onClick={() => updateState({ ui: { spotifyOpen: true } })}
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.54.659.301 1.02zm1.44-3.3c-.301.42-.84.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.239.54-.959.72-1.56.3z"/></svg>
+              <svg className="w-3.5 h-3.5 text-[#5a7a6a] group-hover:text-[#1DB954] transition-colors duration-250" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.54.659.301 1.02zm1.44-3.3c-.301.42-.84.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.239.54-.959.72-1.56.3z"/></svg>
               Sync
             </button>
           </div>
@@ -346,7 +347,7 @@ export default function App() {
 
         {/* ─── HERO SECTION (Split Layout) ────────────────── */}
         {!state.ui.heroCollapsed && (
-          <section className="w-full max-w-7xl mx-auto px-8 md:px-12 pt-8 pb-14 relative">
+          <section className="w-full max-w-7xl mx-auto px-8 md:px-12 pt-8 pb-10 relative">
             {/* Radial glow behind hero */}
             <div className="radial-glow" style={{ top: '-100px', left: '10%' }} />
 
@@ -600,7 +601,7 @@ export default function App() {
                       className={`group flex items-center gap-2.5 px-5 py-3 rounded-full border border-brand-divider/60 bg-brand-surface/30 text-brand-text-secondary hover:text-brand-text-primary hover:bg-brand-surface/60 hover:border-brand-highlight/40 hover:-translate-y-[2px] hover:shadow-[0_6px_20px_-6px_rgba(74,111,165,0.15)] focus:outline-none ${HOVER_TRANSITION}`}
                       style={{ animation: `fade-in-up 0.4s ease-out both`, animationDelay: `${idx * 0.04}s` }}
                     >
-                      <span className={`text-base group-hover:scale-110 ${HOVER_TRANSITION}`}>{mood.emoji}</span>
+                      <mood.icon size={16} strokeWidth={1.5} className={`shrink-0 group-hover:scale-110 ${HOVER_TRANSITION}`} />
                       <span className="text-[15px] font-sans tracking-wide">{mood.label}</span>
                     </button>
                   ))}
@@ -632,7 +633,7 @@ export default function App() {
                     onClick={() => handleSuggestionClick(mood.query)}
                     className={`text-[15px] border border-brand-divider px-5 py-2.5 rounded-full hover:bg-brand-surface/50 hover:text-brand-text-primary hover:border-brand-highlight/30 transition-colors duration-250 focus:outline-none`}
                   >
-                    {mood.emoji} {mood.label}
+                    <mood.icon size={16} strokeWidth={1.5} className="inline-block align-[-2px] mr-1.5" />{mood.label}
                   </button>
                 ))}
               </div>
@@ -844,7 +845,7 @@ export default function App() {
       {/* ─── MOVIE DETAIL OVERLAY ─────────────────────────── */}
       {state.ui.detailOpen && state.selectedMovie && (
         <div 
-          className="fixed inset-0 z-50 overflow-y-auto bg-brand-bg/95 backdrop-blur-xl flex justify-center py-14 md:py-20 px-6 md:px-12"
+          className="fixed inset-0 z-[60] overflow-y-auto bg-brand-bg/95 backdrop-blur-xl flex justify-center py-14 md:py-20 px-6 md:px-12"
           role="dialog"
           aria-modal="true"
         >
@@ -931,7 +932,7 @@ export default function App() {
       {/* ─── SPOTIFY SYNC OVERLAY ─────────────────────────── */}
       {state.ui.spotifyOpen && (
         <div 
-          className="fixed inset-0 z-50 overflow-y-auto bg-brand-bg/95 backdrop-blur-xl flex items-center justify-center py-14 px-6"
+          className="fixed inset-0 z-[60] overflow-y-auto bg-brand-bg/95 backdrop-blur-xl flex items-center justify-center py-14 px-6"
           role="dialog"
           aria-modal="true"
         >
