@@ -1,0 +1,9 @@
+# .dockerignore
+.venv
+venv
+__pycache__
+*.pyc
+.git
+
+# Exclude your local ChromaDB directory path
+data/chroma_db
