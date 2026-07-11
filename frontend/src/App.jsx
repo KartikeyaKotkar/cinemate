@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const SUGGESTED_QUERIES = [
   "I want something bittersweet but hopeful.",
   "A rainy Sunday movie.",
@@ -28,22 +30,6 @@ const MOOD_PILLS = [
 
 const HOVER_TRANSITION = "transition-all duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)]";
 
-const FEATURED_FALLBACK = {
-  id: 693134,
-  title: "Dune: Part Two",
-  overview: "Paul Atreides unites with Chani and the Fremen while on a warpath of revenge against the conspirators who destroyed his family.",
-  poster_url: "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2TGbiOO09.jpg",
-  backdrop_url: "https://image.tmdb.org/t/p/original/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg",
-  genres: ["Science Fiction", "Adventure"],
-  keywords: ["desert", "messiah", "sandworm", "spice"],
-  release_year: "2024",
-  rating: 8.3,
-  runtime: 166,
-  similarity_score: 1.0,
-  match_reason: "Handpicked for its cinematic excellence and timeless appeal.",
-  spoken_languages: ["English"],
-  production_companies: ["Legendary Pictures"]
-};
 
 export default function App() {
   const [state, setState] = useState({
@@ -56,7 +42,7 @@ export default function App() {
     activeSuggestion: null,
     recentSearches: [],
     watchlist: [],
-    featuredFilm: FEATURED_FALLBACK,
+    featuredFilm: null,
     spotifyUrl: "",
     spotifyLoading: false,
     ui: {
@@ -95,7 +81,7 @@ export default function App() {
       }, 300);
     }, 5500);
 
-    fetch('http://localhost:8000/featured')
+    fetch(`${API_BASE_URL}/featured`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) updateState({ featuredFilm: data });
@@ -137,7 +123,7 @@ export default function App() {
     });
 
     try {
-      const response = await fetch(`http://localhost:8000/search?q=${encodeURIComponent(searchQuery)}&limit=8`);
+      const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(searchQuery)}&limit=8`);
       if (!response.ok) {
         throw new Error("Failed to communicate with CineMate search engine.");
       }
@@ -177,7 +163,7 @@ export default function App() {
     });
 
     try {
-      const response = await fetch(`http://localhost:8000/search/spotify?url=${encodeURIComponent(url)}&limit=8`);
+      const response = await fetch(`${API_BASE_URL}/search/spotify?url=${encodeURIComponent(url)}&limit=8`);
       if (!response.ok) {
         throw new Error("Failed to process Spotify playlist.");
       }
@@ -310,7 +296,7 @@ export default function App() {
 
           {/* Center: Nav Links — 16px */}
           <div className="hidden md:flex items-center gap-9">
-            {['Explore', 'Collections', 'Watchlist', 'About'].map(link => (
+            {['Explore', 'Collections', 'Watchlist'].map(link => (
               <button
                 key={link}
                 className="text-base uppercase tracking-[0.12em] font-sans text-brand-text-secondary hover:text-brand-text-primary transition-colors duration-250 focus:outline-none"
@@ -335,15 +321,17 @@ export default function App() {
 
           {/* Right: Search icon + Profile */}
           <div className="flex items-center gap-5">
-            <button 
-              className="text-brand-text-secondary hover:text-brand-text-primary transition-colors duration-250 focus:outline-none p-1"
-              onClick={() => textareaRef.current?.focus()}
-              aria-label="Focus search"
-            >
-              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-              </svg>
-            </button>
+            {(headerScrolled || state.ui.heroCollapsed) && (
+              <button 
+                className="text-brand-text-secondary hover:text-brand-text-primary transition-colors duration-250 focus:outline-none p-1"
+                onClick={() => textareaRef.current?.focus()}
+                aria-label="Focus search"
+              >
+                <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+              </button>
+            )}
             <div className="w-8 h-8 rounded-full bg-brand-surface border border-brand-divider flex items-center justify-center">
               <svg className="w-4 h-4 text-brand-text-secondary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
@@ -801,7 +789,7 @@ export default function App() {
               <div>
                 <span className="text-xs tracking-[0.2em] uppercase text-brand-text-secondary/60 font-mono block mb-5">Explore</span>
                 <ul className="space-y-3">
-                  {['Movies', 'Genres', 'Collections', 'Trending'].map(item => (
+                  {['Trending'].map(item => (
                     <li key={item}><span className={`text-[15px] text-brand-text-secondary hover:text-brand-text-primary cursor-pointer ${HOVER_TRANSITION}`}>{item}</span></li>
                   ))}
                 </ul>
