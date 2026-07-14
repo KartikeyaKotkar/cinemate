@@ -402,13 +402,13 @@ export default function App() {
                           </svg>
                         </button>
                       )}
-                      <span className="text-xs font-mono opacity-50 select-none tracking-wider">
+                      <span className="text-xs font-mono opacity-70 select-none tracking-wider">
                         {state.query.length}/500
                       </span>
                       <button
                         onClick={() => performSearch(state.query)}
                         disabled={!state.query.trim()}
-                        className="p-1.5 text-brand-text-primary hover:text-brand-accent disabled:opacity-20 transition-colors duration-250 focus:outline-none rounded-lg"
+                        className="p-2 rounded-full bg-white/[0.08] text-brand-text-primary hover:bg-white/[0.16] hover:text-brand-accent disabled:opacity-20 transition-all duration-250 focus:outline-none"
                         title="Search (Ctrl + Enter)"
                         aria-label="Execute search"
                       >
