@@ -36,6 +36,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.code-workspace
+.antigravity/
+.agents
 
 # ── Node (frontend) ──────────────────────────────────────────────────────────
 node_modules/
