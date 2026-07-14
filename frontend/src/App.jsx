@@ -73,7 +73,7 @@ export default function App() {
 
   useEffect(() => {
     setHomepageQuote(CINEMATIC_QUOTES[Math.floor(Math.random() * CINEMATIC_QUOTES.length)]);
-    
+
     const timer = setInterval(() => {
       setFadePlaceholder(false);
       setTimeout(() => {
@@ -116,11 +116,11 @@ export default function App() {
 
   const performSearch = async (searchQuery) => {
     if (!searchQuery || searchQuery.trim().length === 0) return;
-    
-    updateState({ 
-      loading: true, 
-      error: null, 
-      ui: { heroCollapsed: true } 
+
+    updateState({
+      loading: true,
+      error: null,
+      ui: { heroCollapsed: true }
     });
 
     try {
@@ -129,12 +129,12 @@ export default function App() {
         throw new Error("Failed to communicate with CineMate search engine.");
       }
       const data = await response.json();
-      
+
       setState(prev => {
         const newSearches = prev.recentSearches.includes(searchQuery)
           ? prev.recentSearches
           : [searchQuery, ...prev.recentSearches].slice(0, 5);
-          
+
         sessionStorage.setItem('cinemate_recent_searches', JSON.stringify(newSearches));
 
         return {
@@ -157,10 +157,10 @@ export default function App() {
   const handleSpotifySync = async () => {
     const url = state.spotifyUrl;
     if (!url || url.trim().length === 0) return;
-    
-    updateState({ 
-      spotifyLoading: true, 
-      error: null 
+
+    updateState({
+      spotifyLoading: true,
+      error: null
     });
 
     try {
@@ -169,7 +169,7 @@ export default function App() {
         throw new Error("Failed to process Spotify playlist.");
       }
       const data = await response.json();
-      
+
       setState(prev => {
         return {
           ...prev,
@@ -246,7 +246,7 @@ export default function App() {
       const isSaved = prev.watchlist.some(m => m.id === movie.id);
       return {
         ...prev,
-        watchlist: isSaved 
+        watchlist: isSaved
           ? prev.watchlist.filter(m => m.id !== movie.id)
           : [...prev.watchlist, movie]
       };
@@ -268,7 +268,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text-primary selection:bg-brand-highlight/30 selection:text-white flex flex-col">
-      
+
       {/* Loading Overlay */}
       {state.loading && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
@@ -278,17 +278,16 @@ export default function App() {
 
       {/* ─── FLOATING HEADER ──────────────────────────────── */}
       <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-6 pt-4">
-        <nav className={`w-full max-w-6xl flex items-center justify-between px-8 py-3.5 rounded-2xl border ${HOVER_TRANSITION} ${
-          headerScrolled 
-            ? 'bg-brand-bg/80 backdrop-blur-xl border-brand-divider shadow-[0_8px_32px_rgba(0,0,0,0.4)]' 
+        <nav className={`w-full max-w-6xl flex items-center justify-between px-8 py-3.5 rounded-2xl border ${HOVER_TRANSITION} ${headerScrolled
+            ? 'bg-brand-bg/80 backdrop-blur-xl border-brand-divider shadow-[0_8px_32px_rgba(0,0,0,0.4)]'
             : 'bg-transparent border-transparent'
-        }`}>
+          }`}>
           {/* Left: Wordmark */}
           <div
             className="cursor-pointer focus:outline-none rounded-lg"
             onClick={handleClear}
             tabIndex={0}
-            onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') handleClear(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClear(); }}
           >
             <span className="font-serif text-[22px] tracking-[0.12em] text-brand-text-primary font-medium hover:text-brand-accent transition-colors duration-250">
               CineMate
@@ -315,7 +314,7 @@ export default function App() {
               className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-brand-divider/40 bg-brand-surface/30 text-xs uppercase tracking-[0.12em] font-sans text-brand-text-secondary/60 hover:text-[#1DB954] hover:border-[#1DB954]/30 hover:bg-[#1DB954]/5 ${HOVER_TRANSITION} focus:outline-none`}
               onClick={() => updateState({ ui: { spotifyOpen: true } })}
             >
-              <svg className="w-3.5 h-3.5 text-[#5a7a6a] group-hover:text-[#1DB954] transition-colors duration-250" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.54.659.301 1.02zm1.44-3.3c-.301.42-.84.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.239.54-.959.72-1.56.3z"/></svg>
+              <svg className="w-3.5 h-3.5 text-[#5a7a6a] group-hover:text-[#1DB954] transition-colors duration-250" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.54.659.301 1.02zm1.44-3.3c-.301.42-.84.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.239.54-.959.72-1.56.3z" /></svg>
               Sync
             </button>
           </div>
@@ -323,7 +322,7 @@ export default function App() {
           {/* Right: Search icon + Profile */}
           <div className="flex items-center gap-5">
             {(headerScrolled || state.ui.heroCollapsed) && (
-              <button 
+              <button
                 className="text-brand-text-secondary hover:text-brand-text-primary transition-colors duration-250 focus:outline-none p-1"
                 onClick={() => textareaRef.current?.focus()}
                 aria-label="Focus search"
@@ -352,7 +351,7 @@ export default function App() {
             <div className="radial-glow" style={{ top: '-100px', left: '10%' }} />
 
             <div className="relative z-10 flex flex-col lg:flex-row items-start gap-14 lg:gap-16">
-              
+
               {/* Left: Editorial copy + Search */}
               <div className="flex-1 max-w-2xl pt-4">
                 <h1 className="font-serif text-[3.2rem] md:text-[3.6rem] lg:text-[4rem] text-brand-text-primary font-medium leading-[1.12] tracking-tight mb-6">
@@ -379,10 +378,9 @@ export default function App() {
                     />
 
                     {!state.query && (
-                      <div 
-                        className={`absolute pointer-events-none text-brand-text-secondary/60 font-sans left-6 top-[24px] text-lg transition-opacity duration-300 ${
-                          fadePlaceholder ? 'opacity-100' : 'opacity-0'
-                        }`}
+                      <div
+                        className={`absolute pointer-events-none text-brand-text-secondary/60 font-sans left-6 top-[24px] text-lg transition-opacity duration-300 ${fadePlaceholder ? 'opacity-100' : 'opacity-0'
+                          }`}
                         aria-hidden="true"
                       >
                         {SUGGESTED_QUERIES[placeholderIndex]}
@@ -391,8 +389,8 @@ export default function App() {
 
                     <div className="absolute flex items-center gap-3 text-brand-text-secondary right-5 bottom-5">
                       {state.query && (
-                        <button 
-                          onClick={handleClear} 
+                        <button
+                          onClick={handleClear}
                           className="p-1 hover:text-brand-accent transition-colors duration-250 focus:outline-none rounded-lg"
                           title="Clear search"
                           aria-label="Clear search"
@@ -428,7 +426,7 @@ export default function App() {
 
               {/* Right: Featured Film of the Day Card */}
               {state.featuredFilm && (
-                <div 
+                <div
                   className={`flex-shrink-0 w-full lg:w-[420px] cursor-pointer group relative rounded-2xl overflow-hidden border border-brand-divider/40 bg-brand-surface/40 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.5)] hover:shadow-[0_20px_56px_-8px_rgba(0,0,0,0.6)] hover:border-brand-divider/60 ${HOVER_TRANSITION}`}
                   onClick={() => handleMovieSelect(state.featuredFilm)}
                   tabIndex={0}
@@ -436,9 +434,9 @@ export default function App() {
                 >
                   {/* Poster */}
                   <div className="relative aspect-[16/10] overflow-hidden">
-                    <img 
-                      src={state.featuredFilm.backdrop_url || state.featuredFilm.poster_url} 
-                      alt={state.featuredFilm.title} 
+                    <img
+                      src={state.featuredFilm.backdrop_url || state.featuredFilm.poster_url}
+                      alt={state.featuredFilm.title}
                       className={`w-full h-full object-cover brightness-[0.6] group-hover:brightness-[0.75] group-hover:scale-[1.03] transition-all duration-700 ease-out`}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-surface via-transparent to-transparent pointer-events-none" />
@@ -452,7 +450,7 @@ export default function App() {
                     <h3 className="font-serif text-2xl text-brand-text-primary mb-2 leading-tight">
                       {state.featuredFilm.title}
                     </h3>
-                    
+
                     {/* Rating */}
                     <div className="flex items-center gap-3 mb-3 text-sm">
                       <span className="text-brand-accent tracking-wider">{getRatingStars(state.featuredFilm.rating)}</span>
@@ -494,10 +492,9 @@ export default function App() {
                 />
 
                 {!state.query && (
-                  <div 
-                    className={`absolute pointer-events-none text-brand-text-secondary/60 font-sans left-6 top-[16px] text-base md:text-lg transition-opacity duration-300 ${
-                      fadePlaceholder ? 'opacity-100' : 'opacity-0'
-                    }`}
+                  <div
+                    className={`absolute pointer-events-none text-brand-text-secondary/60 font-sans left-6 top-[16px] text-base md:text-lg transition-opacity duration-300 ${fadePlaceholder ? 'opacity-100' : 'opacity-0'
+                      }`}
                     aria-hidden="true"
                   >
                     {SUGGESTED_QUERIES[placeholderIndex]}
@@ -506,8 +503,8 @@ export default function App() {
 
                 <div className="absolute flex items-center gap-3 text-brand-text-secondary right-4 bottom-3.5">
                   {state.query && (
-                    <button 
-                      onClick={handleClear} 
+                    <button
+                      onClick={handleClear}
                       className="p-1 hover:text-brand-accent transition-colors duration-250 focus:outline-none rounded-lg"
                       title="Clear search"
                       aria-label="Clear search"
@@ -539,7 +536,7 @@ export default function App() {
 
         {/* ─── DYNAMIC CONTENT AREA ───────────────────────── */}
         <section className="w-full max-w-7xl mx-auto px-8 md:px-12 flex-grow">
-          
+
           {/* Skeleton Loader */}
           {state.loading && (
             <div className="space-y-5 py-10">
@@ -567,7 +564,7 @@ export default function App() {
           {/* ─── HOMEPAGE: Mood Pills + Recent Searches ───── */}
           {!state.ui.heroCollapsed && !state.loading && !state.error && (
             <div className="space-y-14 pb-16 pt-4">
-              
+
               {/* Recent Searches */}
               {state.recentSearches.length > 0 && (
                 <div>
@@ -620,7 +617,7 @@ export default function App() {
           {state.ui.heroCollapsed && state.results.length === 0 && !state.loading && !state.error && (
             <div className="text-center max-w-2xl mx-auto py-20 space-y-6">
               <div className="text-brand-text-primary text-3xl font-serif">We couldn't find a match.</div>
-              
+
               <div className="space-y-2 text-base text-brand-text-secondary pb-6">
                 <p>Try describing a feeling instead of a genre.</p>
                 <p>Search for an emotion, a memory, or an atmosphere.</p>
@@ -643,7 +640,7 @@ export default function App() {
           {/* ─── SEARCH RESULTS ───────────────────────────── */}
           {state.ui.heroCollapsed && state.results.length > 0 && !state.loading && !state.error && (
             <div className="space-y-8 py-10">
-              
+
               <div className="pb-4">
                 <span className="text-brand-text-secondary font-serif text-lg italic tracking-wide">
                   Showing the closest cinematic matches for your mood.
@@ -699,7 +696,7 @@ export default function App() {
 
                       {/* Movie info */}
                       <div className="flex-grow flex flex-col py-0.5">
-                        
+
                         <h3 className={`font-serif text-2xl md:text-[1.7rem] tracking-tight text-brand-text-primary group-hover:text-white leading-snug mb-3 ${HOVER_TRANSITION}`}>
                           {movie.title}
                         </h3>
@@ -726,7 +723,7 @@ export default function App() {
                               </span>
                             ))}
                           </div>
-                          
+
                           {/* Metadata row — separators between items */}
                           <div className="text-xs text-brand-text-secondary/70 font-mono tracking-widest uppercase flex flex-wrap items-center gap-x-3 gap-y-1">
                             {movie.runtime && <span>{movie.runtime} min</span>}
@@ -771,7 +768,7 @@ export default function App() {
         <footer className="w-full border-t border-brand-divider/30 mt-auto">
           <div className="max-w-7xl mx-auto px-8 md:px-12 py-14">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-10 mb-12">
-              
+
               {/* Col 1: Brand */}
               <div>
                 <span className="font-serif text-xl tracking-[0.1em] text-brand-text-primary font-medium block mb-4">CineMate</span>
@@ -780,7 +777,7 @@ export default function App() {
                 </p>
                 <div className="flex items-center gap-4">
                   <a href="https://github.com" target="_blank" rel="noopener noreferrer" className={`text-brand-text-secondary/60 hover:text-brand-text-primary ${HOVER_TRANSITION}`}>
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/></svg>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z" /></svg>
                   </a>
                   <a href="#" className={`text-[15px] text-brand-text-secondary/60 hover:text-brand-text-primary ${HOVER_TRANSITION}`}>About</a>
                 </div>
@@ -810,9 +807,9 @@ export default function App() {
               <div>
                 <span className="text-xs tracking-[0.2em] uppercase text-brand-text-secondary/60 font-mono block mb-5">Stay Updated</span>
                 <div className="flex gap-2 mb-5">
-                  <input 
-                    type="email" 
-                    placeholder="your@email.com" 
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
                     className="flex-1 bg-brand-surface/50 border border-brand-divider rounded-xl px-4 py-2.5 text-[15px] text-brand-text-primary placeholder-brand-text-secondary/40 outline-none focus:border-brand-highlight/40 transition-colors duration-250"
                   />
                   <button className={`px-3.5 py-2.5 bg-brand-surface border border-brand-divider rounded-xl text-brand-text-secondary hover:text-brand-text-primary hover:border-brand-highlight/40 ${HOVER_TRANSITION}`}>
@@ -844,18 +841,18 @@ export default function App() {
 
       {/* ─── MOVIE DETAIL OVERLAY ─────────────────────────── */}
       {state.ui.detailOpen && state.selectedMovie && (
-        <div 
-          className="fixed inset-0 z-[60] overflow-y-auto bg-brand-bg/95 backdrop-blur-xl flex justify-center py-14 md:py-20 px-6 md:px-12"
+        <div
+          className="fixed inset-0 z-[60] overflow-y-auto bg-black/90 backdrop-blur-xl flex justify-center py-14 md:py-20 px-6 md:px-12"
           role="dialog"
           aria-modal="true"
         >
           <div className="relative w-full max-w-6xl bg-transparent flex flex-col md:flex-row gap-10 md:gap-14" style={{ animation: 'fade-in 0.3s ease-out both' }}>
-            
+
             {/* Immersive backdrop */}
             {state.selectedMovie.poster_url && (
-              <div 
-                className="absolute inset-0 z-[-1] opacity-5 blur-[100px] pointer-events-none bg-cover bg-center" 
-                style={{ backgroundImage: `url(${state.selectedMovie.poster_url})`}} 
+              <div
+                className="absolute inset-0 z-[-1] opacity-5 blur-[100px] pointer-events-none bg-cover bg-center"
+                style={{ backgroundImage: `url(${state.selectedMovie.poster_url})` }}
               />
             )}
 
@@ -897,7 +894,7 @@ export default function App() {
               <p className="text-brand-text-secondary text-base md:text-lg leading-[1.9] mb-10">
                 {state.selectedMovie.overview}
               </p>
-              
+
               <div className="grid grid-cols-2 gap-x-8 gap-y-6 text-base mb-12 border-t border-brand-divider/30 pt-7">
                 {[
                   { label: 'Director', value: 'Unknown' },
@@ -928,10 +925,10 @@ export default function App() {
           </div>
         </div>
       )}
-
+      /
       {/* ─── SPOTIFY SYNC OVERLAY ─────────────────────────── */}
       {state.ui.spotifyOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[60] overflow-y-auto bg-brand-bg/95 backdrop-blur-xl flex items-center justify-center py-14 px-6"
           role="dialog"
           aria-modal="true"
@@ -947,7 +944,7 @@ export default function App() {
               </svg>
             </button>
 
-            <svg className="w-16 h-16 mx-auto text-[#1DB954] mb-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.54.659.301 1.02zm1.44-3.3c-.301.42-.84.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.239.54-.959.72-1.56.3z"/></svg>
+            <svg className="w-16 h-16 mx-auto text-[#1DB954] mb-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.54.659.301 1.02zm1.44-3.3c-.301.42-.84.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.84.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.239.54-.959.72-1.56.3z" /></svg>
 
             <h2 className="font-serif text-3xl md:text-4xl text-brand-text-primary mb-4 leading-tight">
               Synesthetic Discovery
