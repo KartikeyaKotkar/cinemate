@@ -146,6 +146,7 @@ export default function App() {
     selectedDirector: null,
     graphData: null,
     graphLoading: false,
+    theme: (typeof document !== 'undefined' && document.documentElement.dataset.theme) || 'dark',
     ui: {
       heroCollapsed: false,
       detailOpen: false,
@@ -171,6 +172,19 @@ export default function App() {
       return { ...prev, ...updates, ui: nextUi };
     });
   };
+
+  const toggleTheme = () => {
+    updateState({ theme: state.theme === 'dark' ? 'light' : 'dark' });
+  };
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = state.theme;
+    try {
+      localStorage.setItem('cinemate-theme', state.theme);
+    } catch {
+      /* private mode: theme just won't persist */
+    }
+  }, [state.theme]);
 
   useEffect(() => {
     setHomepageQuote(CINEMATIC_QUOTES[Math.floor(Math.random() * CINEMATIC_QUOTES.length)]);
@@ -458,8 +472,16 @@ export default function App() {
             </button>
           </div>
 
-          {/* Right: Search icon + Profile */}
+          {/* Right: Theme toggle + Search icon + Profile */}
           <div className="flex items-center gap-5">
+            <button
+              onClick={toggleTheme}
+              className="text-brand-text-secondary hover:text-brand-accent transition-colors duration-250 focus:outline-none p-1"
+              title={state.theme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle light and dark mode"
+            >
+              {state.theme === 'dark' ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}
+            </button>
             {(headerScrolled || state.ui.heroCollapsed) && (
               <button
                 className="text-brand-text-secondary hover:text-brand-text-primary transition-colors duration-250 focus:outline-none p-1"

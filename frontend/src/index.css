@@ -15,6 +15,39 @@
   --font-sans: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
+/* Light mode: warm editorial paper. Applied via
+   <html data-theme="light">, overrides every brand utility. */
+[data-theme="light"] {
+  --color-brand-bg: #F6F1E7;
+  --color-brand-surface: #FFFDF7;
+  --color-brand-accent: #B97A0B;
+  --color-brand-highlight: #4A6FA5;
+  --color-brand-text-primary: #1C1710;
+  --color-brand-text-secondary: #5E574A;
+  --color-brand-divider: rgba(28, 23, 16, 0.12);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #F6F1E7;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #D8CFB8;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #C2B696;
+}
+
+[data-theme="light"] .animate-shimmer::after {
+  background: linear-gradient(90deg, transparent, rgba(28, 23, 16, 0.05), transparent);
+}
+
+[data-theme="light"] body::after {
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+}
+
 /* Global resets and editorial defaults */
 body {
   background-color: var(--color-brand-bg);
