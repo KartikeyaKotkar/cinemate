@@ -173,6 +173,7 @@ def tmdb_title_search(query: str, limit: int = TOP_K) -> list[dict]:
                 "spoken_languages": "",
                 "production_companies": "",
                 "belongs_to_collection": "",
+                "directors": "",
                 "_movie_id": str(movie["id"]),
                 "_source": "tmdb",
                 "_similarity": None,  # no cosine score for title matches

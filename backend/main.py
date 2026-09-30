@@ -107,6 +107,12 @@ def format_movie(r: dict) -> MovieResult:
     companies_str = r.get("production_companies", "")
     companies = [c.strip() for c in companies_str.split(",")] if companies_str else []
 
+    directors_raw = r.get("directors", "")
+    if isinstance(directors_raw, list):
+        directors = [str(d).strip() for d in directors_raw if str(d).strip()]
+    else:
+        directors = [d.strip() for d in directors_raw.split(",")] if directors_raw else []
+
     return MovieResult(
         id=int(r.get("_movie_id", 0)),
         title=r.get("title", ""),
@@ -122,14 +128,15 @@ def format_movie(r: dict) -> MovieResult:
         tagline=r.get("tagline") or None,
         runtime=int(r.get("runtime", 0)) or None,
         spoken_languages=langs,
-        production_companies=companies
+        production_companies=companies,
+        directors=directors or None
     )
 
 @app.get("/search", response_model=SearchResponse)
 def search_movies(q: str, limit: int = 10):
     """Semantic search with hybrid fallback."""
     norm_q = q.lower().strip()
-    cache_key = f"search:v2:{norm_q}:{limit}"
+    cache_key = f"search:v3:{norm_q}:{limit}"
     
     cached_data = cache.get(cache_key)
     if cached_data:
@@ -371,10 +378,10 @@ def get_movie(request: Request, movie_id: int):
     """Fetch movie details directly from ChromaDB by ID."""
     collection = request.app.state.collection
     found = collection.get(ids=[str(movie_id)], include=["metadatas"])
-    
+
     if not found["ids"]:
         raise HTTPException(status_code=404, detail="Movie not found")
-        
+
     meta = found["metadatas"][0]
     meta["_movie_id"] = found["ids"][0]
     return format_movie(meta)
@@ -423,7 +430,24 @@ def get_featured():
             
         poster_path = detail_data.get("poster_path")
         backdrop_path = detail_data.get("backdrop_path")
-        
+
+        directors = []
+        try:
+            credits_res = requests.get(
+                f"https://api.themoviedb.org/3/movie/{movie_id}/credits",
+                params={"api_key": TMDB_API_KEY},
+                headers=headers,
+                timeout=10
+            )
+            credits_res.raise_for_status()
+            directors = [
+                c.get("name", "")
+                for c in credits_res.json().get("crew", [])
+                if c.get("job") == "Director" and c.get("name")
+            ]
+        except requests.RequestException:
+            directors = []
+
         return MovieResult(
             id=detail_data.get("id", 0),
             title=detail_data.get("title") or detail_data.get("original_title") or "",
@@ -438,7 +462,8 @@ def get_featured():
             match_reason="Trending globally on TMDB today.",
             runtime=detail_data.get("runtime"),
             spoken_languages=[lang["english_name"] for lang in detail_data.get("spoken_languages", [])],
-            production_companies=[comp["name"] for comp in detail_data.get("production_companies", [])]
+            production_companies=[comp["name"] for comp in detail_data.get("production_companies", [])],
+            directors=directors or None
         )
     except requests.RequestException as e:
         logger.error(f"Failed to fetch featured movie from TMDB: {e}")
@@ -458,7 +483,8 @@ def get_featured():
         match_reason="Featured Film of the Day",
         runtime=166,
         spoken_languages=["English"],
-        production_companies=["Legendary Pictures"]
+        production_companies=["Legendary Pictures"],
+        directors=["Denis Villeneuve"]
     )
 
 @app.get("/health")

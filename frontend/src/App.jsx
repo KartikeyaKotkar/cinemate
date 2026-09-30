@@ -731,6 +731,12 @@ export default function App() {
                             <span>{movie.release_year}</span>
                             <span className="text-brand-divider">·</span>
                             <span>{movie.rating?.toFixed(1)}/10</span>
+                            {movie.directors?.length > 0 && (
+                              <>
+                                <span className="text-brand-divider">·</span>
+                                <span className="normal-case tracking-wide">Dir. {movie.directors.join(', ')}</span>
+                              </>
+                            )}
                           </div>
 
                           {/* Action Buttons */}
@@ -897,8 +903,7 @@ export default function App() {
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-6 text-base mb-12 border-t border-brand-divider/30 pt-7">
                 {[
-                  { label: 'Director', value: 'Unknown' },
-                  { label: 'Cast', value: 'Unknown' },
+                  { label: 'Director', value: state.selectedMovie.directors?.join(', ') || 'N/A' },
                   { label: 'Runtime', value: state.selectedMovie.runtime ? `${state.selectedMovie.runtime} minutes` : 'N/A' },
                   { label: 'Genres', value: state.selectedMovie.genres.join(', ') || 'N/A' },
                   { label: 'Studios', value: state.selectedMovie.production_companies?.join(', ') || 'N/A' },

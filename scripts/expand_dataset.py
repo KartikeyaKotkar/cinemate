@@ -74,6 +74,26 @@ def get_keywords(movie_id: int) -> list[str]:
         return []
 
 
+def get_movie_credits(movie_id: int) -> list[str]:
+    """Fetch director names for a single movie."""
+    try:
+        r = session.get(
+            f"{BASE_URL}/movie/{movie_id}/credits",
+            params={"api_key": TMDB_API_KEY},
+            headers=HEADERS,
+            timeout=10,
+        )
+        r.raise_for_status()
+        return [
+            c.get("name", "")
+            for c in r.json().get("crew", [])
+            if c.get("job") == "Director" and c.get("name")
+        ]
+    except Exception as e:
+        print(f"  ⚠ Failed to get credits for {movie_id}: {e}")
+        return []
+
+
 def get_movie_details(movie_id: int) -> dict:
     """Fetch /movie/{id} for enrichment fields."""
     r = session.get(
@@ -241,6 +261,7 @@ def discover_and_enrich():
                     m["keywords"] = get_keywords(m["id"])
                     details = get_movie_details(m["id"])
                     m.update(details)
+                    m["directors"] = get_movie_credits(m["id"])
                     return m
                 except Exception as e:
                     print(f"  ⚠ Failed to enrich movie {m['id']} ({m['title']}): {e}")

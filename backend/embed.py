@@ -29,7 +29,8 @@ def build_text(movie: dict) -> str:
     Build a rich text representation for embedding.
 
     Combines: overview, tagline, genres, keywords, runtime,
-    spoken_languages, production_companies, belongs_to_collection.
+    spoken_languages, production_companies, belongs_to_collection,
+    directors.
     The richer the signal, the better cosine similarity works.
     """
     parts = []
@@ -41,6 +42,12 @@ def build_text(movie: dict) -> str:
     tagline = movie.get("tagline", "")
     if tagline:
         parts.append(f"Tagline: {tagline}")
+
+    directors = movie.get("directors", [])
+    if isinstance(directors, str):
+        directors = [d.strip() for d in directors.split(",") if d.strip()]
+    if directors:
+        parts.append(f"Directed by: {', '.join(directors)}.")
 
     genres = ", ".join(movie.get("genres", []))
     if genres:
@@ -160,6 +167,7 @@ def embed_and_store(movies: list[dict]):
                 "spoken_languages": ", ".join(m.get("spoken_languages") or []),
                 "production_companies": ", ".join(m.get("production_companies") or []),
                 "belongs_to_collection": str(m.get("belongs_to_collection") or ""),
+                "directors": ", ".join(m.get("directors") or []),
             }
             for m in batch
         ]

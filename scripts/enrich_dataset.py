@@ -5,7 +5,7 @@ Reads:  scripts/data/movies_dataset.json
 Writes: scripts/data/movies_enriched.json
 
 Extra fields: tagline, runtime, spoken_languages, production_companies,
-belongs_to_collection. These improve embedding quality for semantic search.
+belongs_to_collection, directors. These improve embedding quality for semantic search.
 """
 
 import json
@@ -48,6 +48,36 @@ retries = Retry(
     allowed_methods=["GET"]
 )
 session.mount("https://", HTTPAdapter(max_retries=retries))
+
+
+def get_movie_credits(movie_id: int) -> dict:
+    """Fetch /movie/{id}/credits for director names."""
+    try:
+        r = session.get(
+            f"{BASE_URL}/movie/{movie_id}/credits",
+            params={"api_key": TMDB_API_KEY},
+            headers=HEADERS,
+            timeout=10,
+        )
+        r.raise_for_status()
+    except requests.exceptions.ConnectionError:
+        print(f"ConnectionError for credits {movie_id}, retrying in 2 seconds...")
+        time.sleep(2)
+        r = session.get(
+            f"{BASE_URL}/movie/{movie_id}/credits",
+            params={"api_key": TMDB_API_KEY},
+            headers=HEADERS,
+            timeout=15,
+        )
+        r.raise_for_status()
+    data = r.json()
+
+    directors = [
+        c.get("name", "")
+        for c in data.get("crew", [])
+        if c.get("job") == "Director" and c.get("name")
+    ]
+    return {"directors": directors}
 
 
 def get_movie_details(movie_id: int) -> dict:
@@ -101,13 +131,19 @@ def enrich(movies: list[dict]) -> list[dict]:
             movie.update(details)
         except requests.RequestException as e:
             print(f"  ⚠ Failed to enrich {movie.get('title', movie_id)}: {e}")
+        try:
+            credits = get_movie_credits(movie_id)
+            movie.update(credits)
+        except requests.RequestException as e:
+            print(f"  ⚠ Failed to fetch credits {movie.get('title', movie_id)}: {e}")
+            movie.setdefault("directors", [])
 
         enriched.append(movie)
 
         if i % 50 == 0 or i == total:
             print(f"Enriched {i}/{total}")
 
-        time.sleep(0.25)  # ~4 req/s, well under TMDB's 40 req/s limit
+        time.sleep(0.5)  # ~2 req/s, two calls per movie (details + credits)
 
     return enriched
 

@@ -16,6 +16,7 @@ class MovieResult(BaseModel):
     runtime: int | None = None
     spoken_languages: list[str] | None = None
     production_companies: list[str] | None = None
+    directors: list[str] | None = None
 
 class SearchResponse(BaseModel):
     query: str
