@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Moon, CloudRain, Aperture, BrainCircuit, Heart, Sunrise, Flame, Sparkles, Mountain, Smile } from 'lucide-react'
+import ForceGraph2D from 'react-force-graph-2d'
+import { Moon, Sun, CloudRain, Aperture, BrainCircuit, Heart, Sunrise, Flame, Sparkles, Mountain, Smile } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -31,6 +32,100 @@ const MOOD_PILLS = [
 
 const HOVER_TRANSITION = "transition-all duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)]";
 
+function DirectorGraph({ data, dark, onMovieClick }) {
+  const graphRef = useRef(null);
+  const imgCache = useRef(new Map());
+  const [, forceRepaint] = useState(0);
+
+  const ink = dark ? '#F5F5F5' : '#1C1710';
+  const hubInk = '#0A0F1E';
+  const ring = dark ? 'rgba(245,166,35,0.5)' : 'rgba(185,122,11,0.6)';
+  const link = dark ? 'rgba(255,255,255,0.14)' : 'rgba(28,23,16,0.14)';
+  const emptyNode = dark ? '#121A2E' : '#E9E0CC';
+
+  useEffect(() => {
+    if (graphRef.current && data) {
+      graphRef.current.d3Force('charge').strength(-200);
+      graphRef.current.d3Force('link').distance(90).strength(0.8);
+      graphRef.current.zoomToFit(400);
+    }
+  }, [data]);
+
+  const getPoster = (url) => {
+    if (!url) return null;
+    let img = imgCache.current.get(url);
+    if (img) return img.complete && img.naturalWidth > 0 ? img : null;
+    img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => forceRepaint(n => n + 1);
+    img.src = url;
+    imgCache.current.set(url, img);
+    return null;
+  };
+
+  const paintNode = (node, ctx, globalScale) => {
+    const radius = Math.sqrt(node.val) * 2.2;
+    if (node.type === 'director') {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = '#F5A623';
+      ctx.fill();
+      ctx.font = `600 ${13 / globalScale}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = hubInk;
+      ctx.fillText(node.label, node.x, node.y);
+      return;
+    }
+    // movie: poster clipped to circle
+    const img = getPoster(node.poster_url);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+    ctx.clip();
+    if (img) {
+      ctx.drawImage(img, node.x - radius, node.y - radius, radius * 2, radius * 2);
+    } else {
+      ctx.fillStyle = emptyNode;
+      ctx.fillRect(node.x - radius, node.y - radius, radius * 2, radius * 2);
+    }
+    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+    ctx.strokeStyle = ring;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    if (globalScale > 0.8) {
+      ctx.font = `${11 / globalScale}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = ink;
+      ctx.fillText(node.label, node.x, node.y + radius + 12 / globalScale);
+    }
+  };
+
+  return (
+    <ForceGraph2D
+      ref={graphRef}
+      graphData={data}
+      nodeId="id"
+      nodeVal="val"
+      nodeLabel="label"
+      nodeCanvasObject={paintNode}
+      onNodeClick={(node) => { if (node.type === 'movie') onMovieClick(node.id); }}
+      enableNodeDrag={true}
+      cooldownTime={2500}
+      onEngineStop={() => {
+        // Pin every node where it settled: graph stays centred, no drift.
+        // New director data has no fx/fy, so simulation still runs per hub.
+        data.nodes.forEach(n => { n.fx = n.x; n.fy = n.y; });
+        graphRef.current?.zoomToFit(400);
+      }}
+      linkColor={() => link}
+      backgroundColor="rgba(0,0,0,0)"
+    />
+  );
+}
+
 
 export default function App() {
   const [state, setState] = useState({
@@ -46,10 +141,16 @@ export default function App() {
     featuredFilm: null,
     spotifyUrl: "",
     spotifyLoading: false,
+    directors: [],
+    directorFilter: "",
+    selectedDirector: null,
+    graphData: null,
+    graphLoading: false,
     ui: {
       heroCollapsed: false,
       detailOpen: false,
-      spotifyOpen: false
+      spotifyOpen: false,
+      directorsOpen: false
     }
   });
 
@@ -259,6 +360,42 @@ export default function App() {
     handleSuggestionClick(`Something matching the themes of ${q}`);
   };
 
+  const openDirectors = async () => {
+    updateState({ ui: { directorsOpen: true } });
+    if (state.directors.length > 0) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/directors`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setState(prev => ({ ...prev, directors: data.directors || [] }));
+    } catch (err) {
+      console.warn("Could not fetch directors:", err);
+    }
+  };
+
+  const fetchDirectorGraph = async (name) => {
+    updateState({ selectedDirector: name, graphLoading: true, graphData: null });
+    try {
+      const res = await fetch(`${API_BASE_URL}/directors/${encodeURIComponent(name)}/graph`);
+      if (!res.ok) throw new Error("Director not found.");
+      const data = await res.json();
+      updateState({ graphData: data, graphLoading: false });
+    } catch {
+      updateState({ graphLoading: false });
+    }
+  };
+
+  const handleGraphMovieClick = async (movieId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/movie/${movieId}`);
+      if (!res.ok) return;
+      const movie = await res.json();
+      handleMovieSelect(movie);
+    } catch (err) {
+      console.warn("Could not fetch movie:", err);
+    }
+  };
+
   const getRatingStars = (rating) => {
     const filledCount = Math.round((rating || 0) / 2);
     return "★".repeat(filledCount) + "☆".repeat(5 - filledCount);
@@ -296,7 +433,7 @@ export default function App() {
 
           {/* Center: Nav Links — 16px */}
           <div className="hidden md:flex items-center gap-9">
-            {['Explore', 'Collections', 'Watchlist'].map(link => (
+            {['Explore', 'Directors', 'Collections', 'Watchlist'].map(link => (
               <button
                 key={link}
                 className="text-base uppercase tracking-[0.12em] font-sans text-brand-text-secondary hover:text-brand-text-primary transition-colors duration-250 focus:outline-none"
@@ -304,6 +441,8 @@ export default function App() {
                   if (link === 'Explore') {
                     handleClear();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else if (link === 'Directors') {
+                    openDirectors();
                   }
                 }}
               >
@@ -844,6 +983,82 @@ export default function App() {
           </div>
         </footer>
       </main>
+
+      {/* ─── DIRECTOR HUB OVERLAY ─────────────────────── */}
+      {state.ui.directorsOpen && (
+        <div
+          className="fixed inset-0 z-[60] overflow-hidden bg-brand-bg/95 backdrop-blur-xl flex flex-col px-6 md:px-12 py-8"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-6">
+            <div>
+              <h2 className="font-serif text-3xl md:text-4xl text-brand-text-primary tracking-tight">Director Hub</h2>
+              <p className="text-brand-text-secondary font-serif italic mt-1">
+                {state.selectedDirector
+                  ? `Films by ${state.selectedDirector}`
+                  : "Pick a director to see their universe."}
+              </p>
+            </div>
+            <button
+              onClick={() => updateState({ ui: { directorsOpen: false } })}
+              className="text-brand-text-secondary hover:text-brand-text-primary transition-colors duration-250 focus:outline-none rounded-xl p-2 hover:bg-brand-surface/50"
+              aria-label="Close director hub"
+            >
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-6 flex-1 min-h-0">
+            {/* Director list */}
+            <div className="w-full md:w-72 shrink-0 flex flex-col min-h-0 border border-brand-divider/30 rounded-2xl bg-brand-surface/20 overflow-hidden">
+              <div className="p-4 border-b border-brand-divider/20">
+                <input
+                  type="text"
+                  placeholder="Filter directors..."
+                  value={state.directorFilter}
+                  onChange={(e) => updateState({ directorFilter: e.target.value })}
+                  className="w-full bg-brand-surface/60 border border-brand-divider rounded-xl px-4 py-2.5 text-[15px] text-brand-text-primary placeholder-brand-text-secondary/40 outline-none focus:border-brand-highlight/40 transition-colors duration-250"
+                />
+              </div>
+              <div className="flex-1 overflow-y-auto p-2">
+                {state.directors
+                  .filter(d => d.name.toLowerCase().includes(state.directorFilter.toLowerCase()))
+                  .slice(0, 300)
+                  .map(d => (
+                    <button
+                      key={d.name}
+                      onClick={() => fetchDirectorGraph(d.name)}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl flex items-center justify-between gap-3 hover:bg-brand-surface/60 focus:outline-none ${HOVER_TRANSITION} ${state.selectedDirector === d.name ? 'bg-brand-surface/60 text-brand-text-primary' : 'text-brand-text-secondary'}`}
+                    >
+                      <span className="text-[15px] font-sans truncate">{d.name}</span>
+                      <span className="text-xs font-mono text-brand-highlight shrink-0">{d.movie_count}</span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Graph canvas */}
+            <div className="flex-1 min-h-[50vh] md:min-h-0 border border-brand-divider/30 rounded-2xl bg-brand-surface/10 overflow-hidden relative">
+              {state.graphLoading && (
+                <div className="absolute inset-0 flex items-center justify-center text-brand-text-secondary font-serif italic text-lg">
+                  Loading {state.selectedDirector}...
+                </div>
+              )}
+              {!state.graphLoading && !state.graphData && (
+                <div className="absolute inset-0 flex items-center justify-center text-brand-text-secondary/60 font-serif italic text-lg px-8 text-center">
+                  Select a director to render their film graph.
+                </div>
+              )}
+              {state.graphData && (
+                <DirectorGraph data={state.graphData} dark={state.theme === 'dark'} onMovieClick={handleGraphMovieClick} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── MOVIE DETAIL OVERLAY ─────────────────────────── */}
       {state.ui.detailOpen && state.selectedMovie && (

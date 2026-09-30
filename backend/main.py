@@ -386,6 +386,72 @@ def get_movie(request: Request, movie_id: int):
     meta["_movie_id"] = found["ids"][0]
     return format_movie(meta)
 
+# ─── Director Hub ─────────────────────────────────────────────────────────────
+
+def _parse_directors_field(meta: dict) -> list[str]:
+    raw = meta.get("directors", "")
+    if isinstance(raw, list):
+        return [str(d).strip() for d in raw if str(d).strip()]
+    if isinstance(raw, str):
+        return [d.strip() for d in raw.split(",") if d.strip()]
+    return []
+
+
+def _get_movie_index(request: Request) -> list[tuple[str, dict]]:
+    """All (chroma_id, metadata) pairs, cached after first load."""
+    cached = getattr(request.app.state, "movie_index", None)
+    if cached is not None:
+        return cached
+    collection = request.app.state.collection
+    data = collection.get(include=["metadatas"])
+    index = list(zip(data["ids"], data["metadatas"]))
+    request.app.state.movie_index = index
+    return index
+
+
+@app.get("/directors")
+def list_directors(request: Request):
+    """All directors with movie counts, sorted most prolific first."""
+    counts: dict[str, int] = {}
+    for _, meta in _get_movie_index(request):
+        for d in _parse_directors_field(meta or {}):
+            counts[d] = counts.get(d, 0) + 1
+    ranked = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
+    return {
+        "directors": [{"name": name, "movie_count": n} for name, n in ranked],
+        "total": len(ranked),
+    }
+
+
+@app.get("/directors/{director_name}/graph")
+def director_graph(request: Request, director_name: str):
+    """Force-graph payload: director hub + poster satellites."""
+    nodes = [
+        {"id": director_name, "label": director_name,
+         "type": "director", "val": 30}
+    ]
+    links = []
+    for mid, meta in _get_movie_index(request):
+        meta = meta or {}
+        if director_name not in _parse_directors_field(meta):
+            continue
+        poster_path = meta.get("poster_path") or ""
+        nodes.append({
+            "id": mid,
+            "label": meta.get("title", ""),
+            "poster_url": (
+                f"https://image.tmdb.org/t/p/w342{poster_path}"
+                if poster_path else None
+            ),
+            "type": "movie",
+            "val": 15,
+        })
+        links.append({"source": director_name, "target": mid})
+
+    if not links:
+        raise HTTPException(status_code=404, detail="Director not found")
+    return {"nodes": nodes, "links": links}
+
 @app.get("/featured", response_model=MovieResult)
 def get_featured():
     """Return the featured film of the day from TMDB."""
